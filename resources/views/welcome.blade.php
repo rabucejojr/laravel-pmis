@@ -205,7 +205,7 @@
     {{-- ── Footer ── --}}
     <footer style="margin-top:auto;background-color:#003087;padding:1.5rem;text-align:center;">
         <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;">
-            &copy; {{ date('Y') }} Department of Science and Technology — PSTO Surigao del Norte. All rights reserved.
+            &copy; {{ date('Y') }} Department of Science and Technology - Surigao del Norte. All rights reserved.
         </p>
         <p style="color:rgba(253,185,19,0.6);font-size:0.7rem;margin-top:0.25rem;letter-spacing:0.04em;text-transform:uppercase;">
             DOST-SDN Project Monitoring and Information System
