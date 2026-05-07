@@ -21,7 +21,7 @@
         <img src="{{ asset('favicon.ico') }}" alt="DOST Logo" class="w-16 h-16 object-contain mb-4 mx-auto">
         <h1 class="text-white text-xl font-bold tracking-wide">DOST-SDN PMIS</h1>
         <p class="text-white/60 text-xs mt-1">Project Monitoring and Information System</p>
-        <p class="text-white/50 text-xs">DOST – PSTO Surigao del Norte</p>
+        <p class="text-white/50 text-xs">DOST - Surigao del Norte</p>
     </div>
 
     {{-- Card --}}
@@ -33,7 +33,7 @@
     </div>
 
     <p class="mt-8 text-white/30 text-xs text-center">
-        &copy; {{ date('Y') }} Department of Science and Technology – PSTO Surigao del Norte
+        &copy; {{ date('Y') }} Department of Science and Technology - Surigao del Norte
     </p>
 </body>
 </html>
