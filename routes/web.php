@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BudgetItemController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinancialTargetController;
 use App\Http\Controllers\PhysicalAccomplishmentController;
@@ -52,6 +53,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{physicalAccomplishment}',   [PhysicalAccomplishmentController::class, 'destroy'])->name('destroy');
         Route::post('/import',  [PhysicalAccomplishmentController::class, 'import'])->name('import');
     });
+
+    // Budget Line Items (standalone full-page view; save handled by Livewire)
+    Route::get('/projects/{project}/budget', [BudgetItemController::class, 'show'])
+         ->name('projects.budget.show');
 
     // Verification Queue
     Route::get('/verification', [VerificationController::class, 'index'])->name('verification.index');

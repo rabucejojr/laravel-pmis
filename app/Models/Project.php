@@ -15,6 +15,7 @@ class Project extends Model
         'title',
         'description',
         'implementing_agency',
+        'co_implementing_agency',
         'location',
         'start_date',
         'end_date',
@@ -49,5 +50,10 @@ class Project extends Model
     public function physicalAccomplishments(): HasMany
     {
         return $this->hasMany(PhysicalAccomplishment::class);
+    }
+
+    public function budgetItems(): HasMany
+    {
+        return $this->hasMany(BudgetItem::class)->orderBy('sort_order');
     }
 }

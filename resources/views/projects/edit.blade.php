@@ -51,6 +51,13 @@
                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 @error('implementing_agency') border-red-400 @enderror">
                 </x-form-field>
 
+                <x-form-field label="Co-Implementing Agency" name="co_implementing_agency">
+                    <input type="text" name="co_implementing_agency" id="co_implementing_agency"
+                           value="{{ old('co_implementing_agency', $project->co_implementing_agency) }}"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Co-implementing agency, if any">
+                </x-form-field>
+
                 <x-form-field label="Location" name="location">
                     <input type="text" name="location" id="location"
                            value="{{ old('location', $project->location) }}"
