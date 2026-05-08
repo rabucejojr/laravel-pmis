@@ -66,6 +66,10 @@
                 CEST
             </x-sidebar-link>
 
+            <x-sidebar-link href="{{ route('projects.index', ['program' => 'SSCP']) }}" :active="$seg === 'projects' && request('program') === 'SSCP'" icon="light-bulb">
+                SSCP
+            </x-sidebar-link>
+
             {{-- Verification --}}
             @if(auth()->user()->hasRole(['admin','encoder','verifier']))
             <div x-show="sidebarOpen" class="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-widest" style="color:rgba(253,185,19,0.7);">
@@ -156,6 +160,7 @@
             <x-sidebar-link href="{{ route('projects.index', ['program' => 'SETUP']) }}" :active="$seg === 'projects' && request('program') === 'SETUP'" icon="briefcase">SETUP</x-sidebar-link>
             <x-sidebar-link href="{{ route('projects.index', ['program' => 'GIA']) }}" :active="$seg === 'projects' && request('program') === 'GIA'" icon="academic-cap">GIA</x-sidebar-link>
             <x-sidebar-link href="{{ route('projects.index', ['program' => 'CEST']) }}" :active="$seg === 'projects' && request('program') === 'CEST'" icon="users">CEST</x-sidebar-link>
+            <x-sidebar-link href="{{ route('projects.index', ['program' => 'SSCP']) }}" :active="$seg === 'projects' && request('program') === 'SSCP'" icon="light-bulb">SSCP</x-sidebar-link>
 
             @if(auth()->user()->hasRole(['admin','encoder','verifier']))
             <div class="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-widest" style="color:rgba(253,185,19,0.7);">Workflow</div>

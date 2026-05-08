@@ -68,7 +68,7 @@
                 Project Monitoring and<br>Information System
             </h1>
             <p style="color:rgba(255,255,255,0.7);font-size:1rem;max-width:36rem;line-height:1.7;">
-                A centralized platform for tracking financial targets and physical accomplishments of DOST-funded projects under SETUP, GIA, and CEST programs.
+                A centralized platform for tracking financial targets and physical accomplishments of DOST-funded projects under SETUP, GIA, CEST, and SSCP programs.
             </p>
 
             @guest
@@ -166,10 +166,11 @@
                     </div>
                     <h3 style="font-weight:600;font-size:0.9375rem;color:#1A1A2E;margin-bottom:0.4rem;">Programs Covered</h3>
                     <p style="font-size:0.8125rem;color:#6B7280;line-height:1.6;">
-                        Supports three DOST programs:
+                        Supports four DOST programs:
                         <span style="font-weight:600;color:#003087;">SETUP</span> (Small Enterprise Technology Upgrading),
-                        <span style="font-weight:600;color:#003087;">GIA</span> (Grant-in-Aid), and
-                        <span style="font-weight:600;color:#003087;">CEST</span> (Community Empowerment through S&T).
+                        <span style="font-weight:600;color:#003087;">GIA</span> (Grant-in-Aid),
+                        <span style="font-weight:600;color:#003087;">CEST</span> (Community Empowerment through S&T), and
+                        <span style="font-weight:600;color:#003087;">SSCP</span> (Smart and Sustainable Communities).
                     </p>
                 </div>
 

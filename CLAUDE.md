@@ -11,7 +11,7 @@ This file orients Claude Code across the entire build of the **DOST Surigao del 
 | App Name         | DOST-SDN PMIS                                                         |
 | Full Name        | Project Monitoring and Information System — DOST Surigao del Norte    |
 | Agency           | Department of Science and Technology Caraga – PSTO Surigao del Norte |
-| Programs Covered | SETUP, GIA, CEST                                                      |
+| Programs Covered | SETUP, GIA, CEST, SSCP                                                |
 | Purpose          | Monitor financial targets and physical accomplishments of DOST-funded projects with document-based verification before data is displayed |
 
 ---

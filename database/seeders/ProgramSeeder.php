@@ -28,6 +28,12 @@ class ProgramSeeder extends Seeder
                 'description' => 'Delivers science and technology interventions to marginalized communities to improve their quality of life.',
                 'is_active'   => true,
             ],
+            [
+                'code'        => 'SSCP',
+                'name'        => 'Smart and Sustainable Communities Program',
+                'description' => 'Promotes smart and sustainable community development through science, technology, and innovation-based solutions.',
+                'is_active'   => true,
+            ],
         ];
 
         foreach ($programs as $program) {
