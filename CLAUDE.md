@@ -313,6 +313,7 @@ php artisan test --filter VerificationServiceTest
 | SETUP | Small Enterprise Technology Upgrading Program |
 | GIA | Grant-in-Aid |
 | CEST | Community Empowerment through Science and Technology |
+| SSCP | Smart and Sustainable Communities Program |
 | PPA | Program, Project, Activity |
 | GAA | General Appropriations Act (budget document) |
 | MOA | Memorandum of Agreement |
