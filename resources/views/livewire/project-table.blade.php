@@ -24,9 +24,8 @@
             <select wire:model.live="status" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="suspended">Suspended</option>
-                <option value="terminated">Terminated</option>
+                <option value="liquidated">Liquidated</option>
+                <option value="unliquidated">Unliquidated</option>
             </select>
         </div>
 
@@ -115,11 +114,10 @@
                         <td class="px-4 py-3">
                             @php
                                 $badge = match($project->status) {
-                                    'active'     => 'bg-green-100 text-green-700',
-                                    'completed'  => 'bg-blue-100 text-blue-700',
-                                    'suspended'  => 'bg-amber-100 text-amber-700',
-                                    'terminated' => 'bg-red-100 text-red-700',
-                                    default      => 'bg-gray-100 text-gray-600',
+                                    'active'       => 'bg-green-100 text-green-700',
+                                    'liquidated'   => 'bg-blue-100 text-blue-700',
+                                    'unliquidated' => 'bg-amber-100 text-amber-700',
+                                    default        => 'bg-gray-100 text-gray-600',
                                 };
                             @endphp
                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $badge }}">

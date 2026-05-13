@@ -4,6 +4,7 @@ use App\Http\Controllers\BudgetItemController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinancialTargetController;
 use App\Http\Controllers\PhysicalAccomplishmentController;
+use App\Http\Controllers\SetupAccomplishmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
@@ -52,6 +53,16 @@ Route::middleware('auth')->group(function () {
         Route::put('/{physicalAccomplishment}',      [PhysicalAccomplishmentController::class, 'update'])->name('update');
         Route::delete('/{physicalAccomplishment}',   [PhysicalAccomplishmentController::class, 'destroy'])->name('destroy');
         Route::post('/import',  [PhysicalAccomplishmentController::class, 'import'])->name('import');
+    });
+
+    // SETUP KPI Accomplishments (nested under project)
+    Route::prefix('projects/{project}/setup-accomplishments')->name('projects.setup-accomplishments.')->group(function () {
+        Route::get('/',                           [SetupAccomplishmentController::class, 'index'])->name('index');
+        Route::get('/create',                     [SetupAccomplishmentController::class, 'create'])->name('create');
+        Route::post('/',                          [SetupAccomplishmentController::class, 'store'])->name('store');
+        Route::get('/{setupAccomplishment}/edit', [SetupAccomplishmentController::class, 'edit'])->name('edit');
+        Route::put('/{setupAccomplishment}',      [SetupAccomplishmentController::class, 'update'])->name('update');
+        Route::delete('/{setupAccomplishment}',   [SetupAccomplishmentController::class, 'destroy'])->name('destroy');
     });
 
     // Budget Line Items (standalone full-page view; save handled by Livewire)

@@ -12,6 +12,9 @@ class DatabaseSeeder extends Seeder
             ProgramSeeder::class,
             UserSeeder::class,
             ProjectSeeder::class,
+            FinancialTargetSeeder::class,
+            PhysicalAccomplishmentSeeder::class,
+            SetupAccomplishmentSeeder::class,
         ]);
     }
 }

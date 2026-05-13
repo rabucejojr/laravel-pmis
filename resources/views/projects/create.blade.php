@@ -29,14 +29,9 @@
                     <x-form-field label="Status" name="status" required class="sm:col-span-1">
                         <select name="status" id="status"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 @error('status') border-red-400 @enderror">
-                            <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active
-                            </option>
-                            <option value="completed" {{ old('status') === 'completed' ? 'selected' : '' }}>Completed
-                            </option>
-                            <option value="suspended" {{ old('status') === 'suspended' ? 'selected' : '' }}>Suspended
-                            </option>
-                            <option value="terminated" {{ old('status') === 'terminated' ? 'selected' : '' }}>Terminated
-                            </option>
+                            <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="liquidated" {{ old('status') === 'liquidated' ? 'selected' : '' }}>Liquidated</option>
+                            <option value="unliquidated" {{ old('status') === 'unliquidated' ? 'selected' : '' }}>Unliquidated</option>
                         </select>
                     </x-form-field>
                 </div>

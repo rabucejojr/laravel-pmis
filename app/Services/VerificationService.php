@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FinancialTarget;
 use App\Models\PhysicalAccomplishment;
+use App\Models\SetupAccomplishment;
 use Carbon\Carbon;
 
 class VerificationService
@@ -135,6 +136,47 @@ class VerificationService
                         $pa->indicator_name
                     );
                 }
+            }
+        }
+
+        return $flags;
+    }
+
+    /**
+     * Run all automated checks on a SetupAccomplishment.
+     *
+     * @return string[]  Flag messages; empty array means all checks passed.
+     */
+    public function checkSetupAccomplishment(SetupAccomplishment $entry): array
+    {
+        $entry->loadMissing('project');
+        $project = $entry->project;
+        $flags   = [];
+
+        // Rule 1: year within project timeline
+        $startYear = $project->start_date->year;
+        $endYear   = $project->end_date->year;
+        if ($entry->year < $startYear || $entry->year > $endYear) {
+            $flags[] = sprintf(
+                'Year %d is outside the project timeline (%d–%d).',
+                $entry->year,
+                $startYear,
+                $endYear
+            );
+        }
+
+        // Rule 2: flag (not reject) if any count actual > 200% of target
+        $countChecks = [
+            'num_projects' => 'Number of Projects',
+            'employment'   => 'Employment Generated',
+            'trainings'    => 'Trainings Conducted',
+        ];
+
+        foreach ($countChecks as $key => $label) {
+            $target = (int) $entry->{"target_{$key}"};
+            $actual = (int) $entry->{"actual_{$key}"};
+            if ($target > 0 && $actual > ($target * 2)) {
+                $flags[] = "{$label}: actual ({$actual}) exceeds 200% of target ({$target}) — please verify.";
             }
         }
 

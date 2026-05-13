@@ -56,4 +56,9 @@ class Project extends Model
     {
         return $this->hasMany(BudgetItem::class)->orderBy('sort_order');
     }
+
+    public function setupAccomplishments(): HasMany
+    {
+        return $this->hasMany(SetupAccomplishment::class);
+    }
 }

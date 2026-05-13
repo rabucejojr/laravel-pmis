@@ -41,6 +41,16 @@
             </svg>
             Physical Accomplishments
         </a>
+        @if($project->program->code === 'SETUP')
+        <a href="{{ route('projects.setup-accomplishments.index', $project) }}"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-colors shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            SETUP KPI Accomplishments
+        </a>
+        @endif
         <a href="{{ route('projects.budget.show', $project) }}"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-colors shadow-sm">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,10 +78,10 @@
                     <dd class="mt-0.5">
                         @php
                             $badge = match($project->status) {
-                                'active'     => 'bg-green-100 text-green-700',
-                                'completed'  => 'bg-blue-100 text-blue-700',
-                                'suspended'  => 'bg-amber-100 text-amber-700',
-                                'terminated' => 'bg-red-100 text-red-700',
+                                'active'       => 'bg-green-100 text-green-700',
+                                'liquidated'   => 'bg-blue-100 text-blue-700',
+                                'unliquidated' => 'bg-amber-100 text-amber-700',
+                                default        => 'bg-gray-100 text-gray-600',
                             };
                         @endphp
                         <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $badge }}">

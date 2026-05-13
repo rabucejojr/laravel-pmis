@@ -6,6 +6,7 @@ use App\Models\FinancialTarget;
 use App\Models\PhysicalAccomplishment;
 use App\Models\Program;
 use App\Models\Project;
+use App\Models\SetupAccomplishment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -177,7 +178,7 @@ class Dashboard extends Component
             ->get()
             ->pluck('cnt', 'status');
 
-        $statuses = ['active', 'completed', 'suspended', 'terminated'];
+        $statuses = ['active', 'liquidated', 'unliquidated'];
         $counts   = array_map(fn ($s) => (int) ($rows[$s] ?? 0), $statuses);
         $labels   = array_map('ucfirst', $statuses);
 
@@ -185,7 +186,7 @@ class Dashboard extends Component
             'chart'     => ['type' => 'donut', 'height' => 300, 'width' => '100%', 'toolbar' => ['show' => false]],
             'series'    => array_values($counts),
             'labels'    => $labels,
-            'colors'    => ['#16a34a', '#003087', '#d97706', '#dc2626'],
+            'colors'    => ['#16a34a', '#003087', '#d97706'],
             'legend'    => ['position' => 'bottom', 'fontSize' => '12px'],
             'dataLabels'=> ['enabled' => true, 'formatter' => 'function(val,opts){return opts.w.globals.series[opts.seriesIndex]}'],
             'plotOptions'=> ['pie' => ['donut' => ['size' => '65%']]],
@@ -253,6 +254,257 @@ class Dashboard extends Component
         ];
     }
 
+    // ── Project accomplishment summaries (table data) ────────────────────────
+
+    private function programProjectSummaries(string $code): array
+    {
+        $year       = $this->year();
+        $projects   = Project::whereHas('program', fn ($q) => $q->where('code', $code))
+                        ->orderBy('title')->get(['id', 'title', 'status']);
+
+        if ($projects->isEmpty()) return [];
+
+        $ids = $projects->pluck('id');
+
+        $ftAgg = FinancialTarget::whereIn('project_id', $ids)
+            ->where('year', $year)->where('verified_status', 'verified')
+            ->groupBy('project_id')
+            ->selectRaw('project_id, SUM(target_amount) as t, SUM(disbursed_amount) as d')
+            ->get()->keyBy('project_id');
+
+        $paAgg = PhysicalAccomplishment::whereIn('project_id', $ids)
+            ->where('year', $year)->where('verified_status', 'verified')
+            ->groupBy('project_id')
+            ->selectRaw('project_id, SUM(target_value) as t, SUM(accomplished_value) as a')
+            ->get()->keyBy('project_id');
+
+        $pendingFT = FinancialTarget::whereIn('project_id', $ids)
+            ->whereIn('verified_status', ['pending', 'flagged'])
+            ->groupBy('project_id')->selectRaw('project_id, COUNT(*) as cnt')
+            ->pluck('cnt', 'project_id');
+
+        $pendingPA = PhysicalAccomplishment::whereIn('project_id', $ids)
+            ->whereIn('verified_status', ['pending', 'flagged'])
+            ->groupBy('project_id')->selectRaw('project_id, COUNT(*) as cnt')
+            ->pluck('cnt', 'project_id');
+
+        return $projects->map(function ($p) use ($ftAgg, $paAgg, $pendingFT, $pendingPA) {
+            $ft = $ftAgg[$p->id]  ?? null;
+            $pa = $paAgg[$p->id]  ?? null;
+
+            $ftT  = (float) ($ft->t ?? 0);
+            $ftD  = (float) ($ft->d ?? 0);
+            $paT  = (float) ($pa->t ?? 0);
+            $paA  = (float) ($pa->a ?? 0);
+
+            return [
+                'title'          => $p->title,
+                'status'         => $p->status,
+                'ft_target'      => $ftT,
+                'ft_disbursed'   => $ftD,
+                'ft_rate'        => $ftT > 0 ? min(round($ftD / $ftT * 100, 1), 999.9) : null,
+                'pa_target'      => $paT,
+                'pa_accomplished'=> $paA,
+                'pa_rate'        => $paT > 0 ? min(round($paA / $paT * 100, 1), 999.9) : null,
+                'pending'        => ((int) ($pendingFT[$p->id] ?? 0)) + ((int) ($pendingPA[$p->id] ?? 0)),
+            ];
+        })->toArray();
+    }
+
+    private function setupProjectSummaries(): array
+    {
+        $year     = $this->year();
+        $projects = Project::whereHas('program', fn ($q) => $q->where('code', 'SETUP'))
+                      ->orderBy('title')->get(['id', 'title', 'status']);
+
+        if ($projects->isEmpty()) return [];
+
+        $saRows = SetupAccomplishment::whereIn('project_id', $projects->pluck('id'))
+            ->where('year', $year)->get()->keyBy('project_id');
+
+        return $projects->map(function ($p) use ($saRows) {
+            $sa = $saRows[$p->id] ?? null;
+            return [
+                'title'               => $p->title,
+                'status'              => $p->status,
+                'record_status'       => $sa?->verified_status,
+                'target_num_projects' => $sa?->target_num_projects,
+                'actual_num_projects' => $sa?->actual_num_projects,
+                'target_ifund_amount' => $sa?->target_ifund_amount,
+                'actual_ifund_amount' => $sa?->actual_ifund_amount,
+                'target_gross_sales'  => $sa?->target_gross_sales,
+                'actual_gross_sales'  => $sa?->actual_gross_sales,
+                'target_employment'   => $sa?->target_employment,
+                'actual_employment'   => $sa?->actual_employment,
+                'target_trainings'    => $sa?->target_trainings,
+                'actual_trainings'    => $sa?->actual_trainings,
+            ];
+        })->toArray();
+    }
+
+    // ── Chart 5: Per-program financial accomplishment (Horizontal Bar) ──────
+
+    private function programFinancialChartOptions(string $code): array
+    {
+        $year = $this->year();
+
+        $rows = FinancialTarget::query()
+            ->select('project_id',
+                DB::raw('SUM(target_amount) as total_target'),
+                DB::raw('SUM(disbursed_amount) as total_disbursed'),
+            )
+            ->where('verified_status', 'verified')
+            ->where('year', $year)
+            ->whereHas('project.program', fn ($q) => $q->where('code', $code))
+            ->groupBy('project_id')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [
+                'chart'  => ['type' => 'bar', 'height' => 200, 'width' => '100%', 'toolbar' => ['show' => false]],
+                'series' => [['name' => 'Target Amount', 'data' => []], ['name' => 'Disbursed Amount', 'data' => []]],
+                'xaxis'  => ['categories' => []],
+                'noData' => ['text' => "No verified financial data for {$year}"],
+            ];
+        }
+
+        $projectIds = $rows->pluck('project_id');
+        $titles     = Project::whereIn('id', $projectIds)->pluck('title', 'id');
+
+        $names     = $rows->map(fn ($r) => Str::limit($titles[$r->project_id] ?? 'Unknown', 30))->toArray();
+        $targets   = $rows->map(fn ($r) => round((float) $r->total_target, 2))->toArray();
+        $disbursed = $rows->map(fn ($r) => round((float) $r->total_disbursed, 2))->toArray();
+        $height    = max(200, count($rows) * 45 + 80);
+
+        return [
+            'chart'       => ['type' => 'bar', 'height' => $height, 'width' => '100%', 'toolbar' => ['show' => false]],
+            'series'      => [
+                ['name' => 'Target Amount',   'data' => array_values($targets)],
+                ['name' => 'Disbursed Amount', 'data' => array_values($disbursed)],
+            ],
+            'xaxis'       => ['categories' => array_values($names)],
+            'colors'      => ['#003087', '#FDB913'],
+            'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4, 'barHeight' => '60%']],
+            'dataLabels'  => ['enabled' => false],
+            'legend'      => ['position' => 'top', 'fontSize' => '12px'],
+            'yaxis'       => ['labels' => ['style' => ['fontSize' => '11px'], 'maxWidth' => 160]],
+            'tooltip'     => ['y' => ['formatter' => 'function(v){return "₱"+v.toLocaleString()}']],
+            'grid'        => ['borderColor' => '#f0f0f0'],
+        ];
+    }
+
+    // ── Chart 6: Per-program physical accomplishment (Horizontal Bar) ────────
+
+    private function programPhysicalChartOptions(string $code): array
+    {
+        $year = $this->year();
+
+        $rows = PhysicalAccomplishment::query()
+            ->select('project_id',
+                DB::raw('SUM(target_value) as total_target'),
+                DB::raw('SUM(accomplished_value) as total_accomplished'),
+            )
+            ->where('verified_status', 'verified')
+            ->where('year', $year)
+            ->whereHas('project.program', fn ($q) => $q->where('code', $code))
+            ->groupBy('project_id')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [
+                'chart'  => ['type' => 'bar', 'height' => 200, 'width' => '100%', 'toolbar' => ['show' => false]],
+                'series' => [['name' => 'Target', 'data' => []], ['name' => 'Accomplished', 'data' => []]],
+                'xaxis'  => ['categories' => []],
+                'noData' => ['text' => "No verified physical data for {$year}"],
+            ];
+        }
+
+        $projectIds   = $rows->pluck('project_id');
+        $titles       = Project::whereIn('id', $projectIds)->pluck('title', 'id');
+
+        $names        = $rows->map(fn ($r) => Str::limit($titles[$r->project_id] ?? 'Unknown', 30))->toArray();
+        $targets      = $rows->map(fn ($r) => round((float) $r->total_target, 2))->toArray();
+        $accomplished = $rows->map(fn ($r) => round((float) $r->total_accomplished, 2))->toArray();
+        $height       = max(200, count($rows) * 45 + 80);
+
+        return [
+            'chart'       => ['type' => 'bar', 'height' => $height, 'width' => '100%', 'toolbar' => ['show' => false]],
+            'series'      => [
+                ['name' => 'Target',       'data' => array_values($targets)],
+                ['name' => 'Accomplished', 'data' => array_values($accomplished)],
+            ],
+            'xaxis'       => ['categories' => array_values($names)],
+            'colors'      => ['#003087', '#16a34a'],
+            'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4, 'barHeight' => '60%']],
+            'dataLabels'  => ['enabled' => false],
+            'legend'      => ['position' => 'top', 'fontSize' => '12px'],
+            'yaxis'       => ['labels' => ['style' => ['fontSize' => '11px'], 'maxWidth' => 160]],
+            'tooltip'     => ['y' => ['formatter' => 'function(v){return v.toLocaleString()}']],
+            'grid'        => ['borderColor' => '#f0f0f0'],
+        ];
+    }
+
+    // ── Chart 7: SETUP KPI target vs actual (split sub-charts) ──────────────
+
+    private function setupKpiChartOptions(): ?array
+    {
+        $year = $this->year();
+
+        $totals = SetupAccomplishment::verified()
+            ->where('year', $year)
+            ->selectRaw('
+                SUM(target_num_projects)  as t_projects,
+                SUM(actual_num_projects)  as a_projects,
+                SUM(target_ifund_amount)  as t_ifund,
+                SUM(actual_ifund_amount)  as a_ifund,
+                SUM(target_gross_sales)   as t_sales,
+                SUM(actual_gross_sales)   as a_sales,
+                SUM(target_employment)    as t_employment,
+                SUM(actual_employment)    as a_employment,
+                SUM(target_trainings)     as t_trainings,
+                SUM(actual_trainings)     as a_trainings
+            ')
+            ->first();
+
+        if (! $totals || (int) $totals->t_projects === 0 && (float) $totals->t_ifund === 0.0) {
+            return null;
+        }
+
+        $financial = [
+            'chart'       => ['type' => 'bar', 'height' => 180, 'width' => '100%', 'toolbar' => ['show' => false]],
+            'series'      => [
+                ['name' => 'Target',  'data' => [round((float) $totals->t_ifund, 2), round((float) $totals->t_sales, 2)]],
+                ['name' => 'Actual',  'data' => [round((float) $totals->a_ifund, 2), round((float) $totals->a_sales, 2)]],
+            ],
+            'xaxis'       => ['categories' => ['iFUND Amount', 'Gross Sales']],
+            'colors'      => ['#003087', '#FDB913'],
+            'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4, 'barHeight' => '60%']],
+            'dataLabels'  => ['enabled' => false],
+            'legend'      => ['position' => 'top', 'fontSize' => '12px'],
+            'yaxis'       => ['labels' => ['style' => ['fontSize' => '11px']]],
+            'tooltip'     => ['y' => ['formatter' => 'function(v){return "₱"+v.toLocaleString()}']],
+            'grid'        => ['borderColor' => '#f0f0f0'],
+        ];
+
+        $activity = [
+            'chart'       => ['type' => 'bar', 'height' => 220, 'width' => '100%', 'toolbar' => ['show' => false]],
+            'series'      => [
+                ['name' => 'Target', 'data' => [(int) $totals->t_projects, (int) $totals->t_employment, (int) $totals->t_trainings]],
+                ['name' => 'Actual', 'data' => [(int) $totals->a_projects, (int) $totals->a_employment, (int) $totals->a_trainings]],
+            ],
+            'xaxis'       => ['categories' => ['No. of Projects', 'Employment Generated', 'Trainings Conducted']],
+            'colors'      => ['#003087', '#16a34a'],
+            'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4, 'barHeight' => '60%']],
+            'dataLabels'  => ['enabled' => false],
+            'legend'      => ['position' => 'top', 'fontSize' => '12px'],
+            'yaxis'       => ['labels' => ['style' => ['fontSize' => '11px']]],
+            'tooltip'     => ['y' => ['formatter' => 'function(v){return v.toLocaleString()}']],
+            'grid'        => ['borderColor' => '#f0f0f0'],
+        ];
+
+        return compact('financial', 'activity');
+    }
+
     // ── Render ───────────────────────────────────────────────────────────────
 
     public function render()
@@ -266,14 +518,41 @@ class Dashboard extends Component
         $programs       = Program::where('is_active', true)->orderBy('code')->get();
         $availableYears = $this->availableYears();
 
+        $programCodes = $this->filterProgram !== ''
+            ? [$this->filterProgram]
+            : $programs->pluck('code')->all();
+
+        $programFinancialCharts  = [];
+        $programPhysicalCharts   = [];
+        $programProjectSummaries = [];
+        $setupKpiChart           = null;
+        $setupProjectSummaries   = [];
+
+        foreach ($programCodes as $code) {
+            if ($code !== 'SETUP') {
+                $programFinancialCharts[$code]  = $this->programFinancialChartOptions($code);
+                $programPhysicalCharts[$code]   = $this->programPhysicalChartOptions($code);
+                $programProjectSummaries[$code] = $this->programProjectSummaries($code);
+            } else {
+                $setupKpiChart         = $this->setupKpiChartOptions();
+                $setupProjectSummaries = $this->setupProjectSummaries();
+            }
+        }
+
         return view('livewire.dashboard', [
-            'summary'          => $summary,
-            'financialChart'   => $financialChart,
-            'accomplishChart'  => $accomplishChart,
-            'statusChart'      => $statusChart,
-            'topProjectsChart' => $topProjectsChart,
-            'programs'         => $programs,
-            'availableYears'   => $availableYears,
+            'summary'                => $summary,
+            'financialChart'         => $financialChart,
+            'accomplishChart'        => $accomplishChart,
+            'statusChart'            => $statusChart,
+            'topProjectsChart'       => $topProjectsChart,
+            'programs'               => $programs,
+            'availableYears'         => $availableYears,
+            'programCodes'           => $programCodes,
+            'programFinancialCharts' => $programFinancialCharts,
+            'programPhysicalCharts'  => $programPhysicalCharts,
+            'setupKpiChart'          => $setupKpiChart,
+            'programProjectSummaries'=> $programProjectSummaries,
+            'setupProjectSummaries'  => $setupProjectSummaries,
         ]);
     }
 
@@ -281,8 +560,9 @@ class Dashboard extends Component
     {
         $ftYears = FinancialTarget::distinct()->orderBy('year')->pluck('year');
         $paYears = PhysicalAccomplishment::distinct()->orderBy('year')->pluck('year');
+        $saYears = SetupAccomplishment::distinct()->orderBy('year')->pluck('year');
 
-        $years = $ftYears->merge($paYears)->unique()->sort()->values();
+        $years = $ftYears->merge($paYears)->merge($saYears)->unique()->sort()->values();
 
         // Always include current year even if no data yet
         $currentYear = (int) date('Y');

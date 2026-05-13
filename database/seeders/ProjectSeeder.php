@@ -57,7 +57,7 @@ class ProjectSeeder extends Seeder
                 'start_date'            => '2023-01-01',
                 'end_date'              => '2024-12-31',
                 'total_approved_budget' => 980000.00,
-                'status'                => 'completed',
+                'status'                => 'liquidated',
             ],
             // CEST projects
             [
@@ -80,6 +80,29 @@ class ProjectSeeder extends Seeder
                 'start_date'            => '2025-01-01',
                 'end_date'              => '2026-12-31',
                 'total_approved_budget' => 450000.00,
+                'status'                => 'active',
+            ],
+            // SSCP projects
+            [
+                'program_id'            => $programs['SSCP'],
+                'title'                 => 'Smart Water Management System for Surigao City',
+                'description'           => 'IoT-based water quality monitoring and distribution management system for Surigao City water utility.',
+                'implementing_agency'   => 'DOST-PSTO Surigao del Norte',
+                'location'              => 'Surigao City, Surigao del Norte',
+                'start_date'            => '2024-01-01',
+                'end_date'              => '2026-12-31',
+                'total_approved_budget' => 2000000.00,
+                'status'                => 'active',
+            ],
+            [
+                'program_id'            => $programs['SSCP'],
+                'title'                 => 'IoT-Based Agricultural Monitoring for Surigao del Norte',
+                'description'           => 'Deployment of sensor networks and data analytics platform for precision agriculture in upland farming communities.',
+                'implementing_agency'   => 'DOST-PSTO Surigao del Norte',
+                'location'              => 'Tubod, Surigao del Norte',
+                'start_date'            => '2024-06-01',
+                'end_date'              => '2026-05-31',
+                'total_approved_budget' => 1500000.00,
                 'status'                => 'active',
             ],
         ];

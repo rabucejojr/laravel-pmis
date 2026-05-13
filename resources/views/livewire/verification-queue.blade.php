@@ -11,6 +11,26 @@
         </div>
     </div>
 
+    {{-- Bulk Actions --}}
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide mr-1">Bulk Actions</span>
+        <button wire:click="openBulkConfirm('verified')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Verify All
+        </button>
+        <button wire:click="openBulkConfirm('rejected')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Reject All
+        </button>
+        <span class="text-xs text-gray-400">(applies to current filters)</span>
+    </div>
+
     {{-- Filters --}}
     <div class="flex flex-wrap gap-3 mb-5">
         <select wire:model.live="filterStatus"
@@ -25,6 +45,7 @@
             <option value="">All types</option>
             <option value="financial">Financial Target</option>
             <option value="physical">Physical Accomplishment</option>
+            <option value="setup">SETUP KPI</option>
         </select>
 
         <select wire:model.live="filterYear"
@@ -103,6 +124,8 @@
                     <td class="px-4 py-3 whitespace-nowrap">
                         @if($row['type'] === 'financial')
                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Financial</span>
+                        @elseif($row['type'] === 'setup')
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">SETUP KPI</span>
                         @else
                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Physical</span>
                         @endif
@@ -184,6 +207,58 @@
     @if($entries->hasPages())
     <div class="mt-4">
         {{ $entries->links() }}
+    </div>
+    @endif
+
+    {{-- Bulk Confirmation Modal --}}
+    @if($bulkAction)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+         wire:click.self="cancelBulkConfirm">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6" @click.stop>
+            <h3 class="text-lg font-bold mb-1" style="color:#003087;">
+                @if($bulkAction === 'verified') ✅ Verify All Entries
+                @else ❌ Reject All Entries
+                @endif
+            </h3>
+            <p class="text-sm text-gray-500 mb-1">
+                @if($bulkAction === 'verified')
+                    All entries matching the current filters will be marked as <strong>verified</strong> and made visible to all roles.
+                @else
+                    All entries matching the current filters will be <strong>rejected</strong> and encoders will be notified.
+                @endif
+            </p>
+            <p class="text-xs text-amber-600 mb-4">
+                Active filters: type={{ $filterType ?: 'all' }}, status={{ $filterStatus ?: 'all' }}, year={{ $filterYear ?: 'all' }}
+            </p>
+
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                    Notes <span class="text-gray-400">(optional — applied to all entries)</span>
+                </label>
+                <textarea wire:model="bulkNotes" rows="3"
+                          placeholder="Add notes for all affected encoders…"
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                @error('bulkNotes')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+                <button wire:click="cancelBulkConfirm"
+                        class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button wire:click="submitBulkAction"
+                        wire:loading.attr="disabled"
+                        wire:target="submitBulkAction"
+                        class="px-5 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="background-color:{{ $bulkAction === 'verified' ? '#16a34a' : '#dc2626' }};"
+                        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    <span wire:loading.remove wire:target="submitBulkAction">Confirm {{ ucfirst($bulkAction) }} All</span>
+                    <span wire:loading wire:target="submitBulkAction">Processing…</span>
+                </button>
+            </div>
+        </div>
     </div>
     @endif
 

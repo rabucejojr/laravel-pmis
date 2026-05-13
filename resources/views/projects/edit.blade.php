@@ -30,7 +30,7 @@
                     <x-form-field label="Status" name="status" required>
                         <select name="status" id="status"
                                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            @foreach(['active','completed','suspended','terminated'] as $s)
+                            @foreach(['active','liquidated','unliquidated'] as $s)
                                 <option value="{{ $s }}" {{ old('status', $project->status) === $s ? 'selected' : '' }}>
                                     {{ ucfirst($s) }}
                                 </option>

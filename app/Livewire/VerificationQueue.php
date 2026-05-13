@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\FinancialTarget;
 use App\Models\PhysicalAccomplishment;
+use App\Models\SetupAccomplishment;
 use App\Models\VerificationLog;
 use App\Notifications\EntryStatusChanged;
 use Illuminate\Support\Collection;
@@ -14,7 +15,7 @@ class VerificationQueue extends Component
 {
     use WithPagination;
 
-    public string $filterType   = '';   // 'financial' | 'physical' | ''
+    public string $filterType   = '';   // 'financial' | 'physical' | 'setup' | ''
     public string $filterStatus = 'pending';  // 'pending' | 'flagged' | ''
     public string $filterYear   = '';
     public string $sortField    = 'created_at';
@@ -22,8 +23,11 @@ class VerificationQueue extends Component
 
     public string $notesInput   = '';
     public ?int   $activeId     = null;
-    public string $activeType   = '';  // 'financial' | 'physical'
+    public string $activeType   = '';  // 'financial' | 'physical' | 'setup'
     public string $activeAction = '';  // 'verified' | 'flagged' | 'rejected'
+
+    public string $bulkAction = '';   // 'verified' | 'rejected'
+    public string $bulkNotes  = '';
 
     protected $queryString = [
         'filterType'   => ['as' => 'type',   'except' => ''],
@@ -117,11 +121,79 @@ class VerificationQueue extends Component
         $this->resetPage();
     }
 
-    private function resolveEntry(int $id, string $type): FinancialTarget|PhysicalAccomplishment|null
+    public function openBulkConfirm(string $action): void
+    {
+        $this->bulkAction = $action;
+        $this->bulkNotes  = '';
+    }
+
+    public function cancelBulkConfirm(): void
+    {
+        $this->bulkAction = '';
+        $this->bulkNotes  = '';
+    }
+
+    public function submitBulkAction(): void
+    {
+        if (! auth()->user()->hasRole(['admin', 'verifier'])) {
+            session()->flash('error', 'Unauthorized.');
+            $this->cancelBulkConfirm();
+            return;
+        }
+
+        $this->validate(['bulkNotes' => 'nullable|string|max:1000']);
+
+        $statuses = $this->filterStatus !== '' ? [$this->filterStatus] : ['pending', 'flagged'];
+        $types    = $this->filterType !== '' ? [$this->filterType] : ['financial', 'physical', 'setup'];
+        $count    = 0;
+
+        $models = [
+            'financial' => FinancialTarget::class,
+            'physical'  => PhysicalAccomplishment::class,
+            'setup'     => SetupAccomplishment::class,
+        ];
+
+        foreach ($types as $type) {
+            $model = $models[$type] ?? null;
+            if (! $model) continue;
+
+            $query = $model::with(['project', 'encoder'])
+                ->whereIn('verified_status', $statuses)
+                ->when($this->filterYear, fn ($q) => $q->where('year', $this->filterYear));
+
+            foreach ($query->get() as $entry) {
+                $entry->update([
+                    'verified_status'    => $this->bulkAction,
+                    'verification_notes' => $this->bulkNotes ?: null,
+                ]);
+
+                $log = VerificationLog::create([
+                    'loggable_type' => get_class($entry),
+                    'loggable_id'   => $entry->id,
+                    'verifier_id'   => auth()->id(),
+                    'action'        => $this->bulkAction,
+                    'notes'         => $this->bulkNotes ?: null,
+                ]);
+
+                if ($entry->encoder) {
+                    $entry->encoder->notify(new EntryStatusChanged($entry, $log->load('verifier')));
+                }
+
+                $count++;
+            }
+        }
+
+        session()->flash('success', "{$count} " . ($count === 1 ? 'entry' : 'entries') . " marked as {$this->bulkAction}.");
+        $this->cancelBulkConfirm();
+        $this->resetPage();
+    }
+
+    private function resolveEntry(int $id, string $type): FinancialTarget|PhysicalAccomplishment|SetupAccomplishment|null
     {
         return match($type) {
             'financial' => FinancialTarget::with(['project', 'encoder'])->find($id),
             'physical'  => PhysicalAccomplishment::with(['project', 'encoder'])->find($id),
+            'setup'     => SetupAccomplishment::with(['project', 'encoder'])->find($id),
             default     => null,
         };
     }
@@ -132,8 +204,10 @@ class VerificationQueue extends Component
             ->distinct()->orderBy('year')->pluck('year');
         $paYears = PhysicalAccomplishment::whereIn('verified_status', ['pending', 'flagged'])
             ->distinct()->orderBy('year')->pluck('year');
+        $saYears = SetupAccomplishment::whereIn('verified_status', ['pending', 'flagged'])
+            ->distinct()->orderBy('year')->pluck('year');
 
-        return $ftYears->merge($paYears)->unique()->sort()->values();
+        return $ftYears->merge($paYears)->merge($saYears)->unique()->sort()->values();
     }
 
     public function render()
@@ -192,6 +266,30 @@ class VerificationQueue extends Component
             }
         }
 
+        if ($this->filterType === '' || $this->filterType === 'setup') {
+            $saQuery = SetupAccomplishment::with(['project.program', 'encoder'])
+                ->whereIn('verified_status', $statuses)
+                ->when($this->filterYear, fn ($q) => $q->where('year', $this->filterYear));
+
+            foreach ($saQuery->get() as $sa) {
+                $entries->push([
+                    'type'       => 'setup',
+                    'id'         => $sa->id,
+                    'project'    => $sa->project->title,
+                    'program'    => 'SETUP',
+                    'period'     => (string) $sa->year,
+                    'label'      => 'SETUP KPI Record',
+                    'extra'      => number_format($sa->actual_num_projects) . ' projects · ₱' . number_format($sa->actual_ifund_amount, 0) . ' iFUND',
+                    'encoder'    => $sa->encoder->name ?? '—',
+                    'status'     => $sa->verified_status,
+                    'notes'      => $sa->verification_notes,
+                    'created_at' => $sa->created_at,
+                    'year'       => $sa->year,
+                    'quarter'    => 0,
+                ]);
+            }
+        }
+
         // Sort
         $entries = $this->sortDir === 'asc'
             ? $entries->sortBy($this->sortField)
@@ -212,9 +310,11 @@ class VerificationQueue extends Component
             'entries'        => $paginator,
             'availableYears' => $this->availableYears(),
             'totalPending'   => FinancialTarget::where('verified_status', 'pending')->count()
-                              + PhysicalAccomplishment::where('verified_status', 'pending')->count(),
+                              + PhysicalAccomplishment::where('verified_status', 'pending')->count()
+                              + SetupAccomplishment::where('verified_status', 'pending')->count(),
             'totalFlagged'   => FinancialTarget::where('verified_status', 'flagged')->count()
-                              + PhysicalAccomplishment::where('verified_status', 'flagged')->count(),
+                              + PhysicalAccomplishment::where('verified_status', 'flagged')->count()
+                              + SetupAccomplishment::where('verified_status', 'flagged')->count(),
         ]);
     }
 }
